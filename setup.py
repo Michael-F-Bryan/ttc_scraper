@@ -16,5 +16,6 @@ setup(
         'bs4',
         'pytest-cov',
         'requests',
+        'jupyter',
         ],
 )
