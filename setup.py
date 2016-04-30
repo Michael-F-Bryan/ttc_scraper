@@ -5,7 +5,7 @@ import sys
 
 setup(
     name='ttc_scraper',
-    version='0.1.0',
+    version='0.1.1',
     packages=find_packages(exclude=['tests', 'docs', 'scripts']),
     license='MIT',
     long_description=open('README.rst').read(),
