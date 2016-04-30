@@ -1,14 +1,58 @@
+import sys
 import os
+import logging
 import errno
-from . import logger
+from collections import namedtuple
 
 
-class BrowserError(RuntimeErroror):
+DownloadLink = namedtuple('DownloadLink', ['round', 'filename', 'link'])
+
+
+class BrowserError(RuntimeError):
     pass
 
 class LoginError(BrowserError):
     pass
 
+
+def get_logger(name, log_file, log_level=None):
+    """
+    Get a logger object which is set up properly with the correct formatting,
+    logfile, etc.
+
+    Parameters
+    ----------
+    name: str
+        The __name__ of the module calling this function.
+    log_file: str
+        The filename of the file to log to.
+
+    Returns
+    -------
+    logging.Logger
+        A logging.Logger object that can be used to log to a common file.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(log_level or logging.INFO)
+
+    if log_file == 'stderr':
+        handler = logging.StreamHandler(sys.stderr)
+    else:
+        handler = logging.FileHandler(log_file)
+
+    if not len(logger.handlers):
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
+            datefmt='%Y/%m/%d %I:%M:%S %p'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    return logger
+
+
+# Create the logger hear so we don't get NameErrors
+logger = get_logger(__name__,  './TyreTestingScraper.log')
 
 _suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
 def humansize(nbytes, decimals=2):
@@ -46,6 +90,7 @@ def humansize(nbytes, decimals=2):
 def mkdir(path):
     try:
         os.makedirs(path)
+        from . import logger
         logger.debug('Made directory: {}'.format(path))
     except OSError as e:
         if e.errno == errno.EEXIST and os.path.isdir(path):
@@ -53,39 +98,4 @@ def mkdir(path):
         else:
             raise
         
-
-def get_logger(name, log_file, log_level=None):
-    """
-    Get a logger object which is set up properly with the correct formatting,
-    logfile, etc.
-
-    Parameters
-    ----------
-    name: str
-        The __name__ of the module calling this function.
-    log_file: str
-        The filename of the file to log to.
-
-    Returns
-    -------
-    logging.Logger
-        A logging.Logger object that can be used to log to a common file.
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(log_level or logging.INFO)
-
-    if log_file == 'stdout':
-        handler = logging.StreamHandler(sys.stdout)
-    else:
-        handler = logging.FileHandler(log_file)
-
-    if not len(logger.handlers):
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s: %(message)s',
-            datefmt='%Y/%m/%d %I:%M:%S %p'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    return logger
 

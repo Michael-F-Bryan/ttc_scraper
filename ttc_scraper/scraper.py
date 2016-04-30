@@ -3,12 +3,13 @@ import requests
 from urllib.parse import urljoin
 import re
 import os
-import errno
-from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 
-from .utils import humansize, BrowserError, LoginError, mkdir
-from . import logger
+from .utils import (humansize, BrowserError, LoginError, mkdir, 
+                    DownloadLink, get_logger)
+
+
+logger = get_logger(__name__,  'stderr')
 
 
 class Browser:
@@ -117,8 +118,6 @@ class Browser:
         """
         Given a testing round post's url, find all the downloadable files.
         """
-        DownloadLink = namedtuple('DownloadLink', ['round', 'filename', 'link'])
-        
         r = self.session.get(round_url)
         soup = BeautifulSoup(r.text, 'html.parser')
         
@@ -211,7 +210,7 @@ class Browser:
         
         pool = ThreadPoolExecutor(max_workers=self.workers)
         self.login()
-        round_links = b.testing_rounds()
+        round_links = self.testing_rounds()
         
         futures = []
         for link in round_links:
@@ -231,7 +230,6 @@ class Browser:
         for future in as_completed(futures):
             download_size = future.result()
             total_bytes += download_size
-            print(download_size)
             
         logger.info('Total bytes downloaded: {}'.format(humansize(total_bytes)))
         return total_bytes
@@ -241,7 +239,7 @@ class Browser:
         A proxy for Browser._start_sequential or Browser._start_concurrent
         depending on the value of `be_courteous`.
         """
-        if be_courteous:
-            self.start = self._start_sequential
+        if self.be_courteous:
+            return self._start_sequential()
         else:
-            self.start = self._start_concurrent
+            return self._start_concurrent()
