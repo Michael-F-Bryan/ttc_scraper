@@ -51,8 +51,9 @@ def get_logger(name, log_file, log_level=None):
     return logger
 
 
-# Create the logger hear so we don't get NameErrors
-logger = get_logger(__name__,  './TyreTestingScraper.log')
+# Create the logger hear so we don't get NameErrors when trying to run makedir
+logger = get_logger(__name__,  'stderr')
+
 
 _suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
 def humansize(nbytes, decimals=2):

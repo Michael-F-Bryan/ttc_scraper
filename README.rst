@@ -12,10 +12,11 @@ Installation
 In order to use this program, you will need to have Python 3 installed.
 Preferably the latest version.
 
-First, obtain the source code by either downloading a copy from `github <>`_ or
-cloning the source directly with `git`::
+First, obtain the source code by either downloading a copy from `github 
+<git@github.com:Michael-F-Bryan/ttc_scraper.git>`_ or cloning the source 
+directly with `git`::
     
-    git clone ------
+    git clone git@github.com:Michael-F-Bryan/ttc_scraper.git
 
 If you want to install the program you can do so with the following command
 (may require superuser privileges). ::
