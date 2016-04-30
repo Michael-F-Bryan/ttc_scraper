@@ -2,6 +2,14 @@
 Tire Testing Consortium Website Scraper
 =======================================
 
+.. Tag number
+.. image::
+https://img.shields.io/github/tag/Michael-F-Bryan/ttc_scraper.svg?maxAge=2592000
+
+.. License
+.. image::
+https://img.shields.io/github/license/Michael-F-Bryan/ttc_scraper.svg?maxAge=2592000
+
 Description
 ===========
 A fairly simple program that will log into the TTC "secure" forum and then
