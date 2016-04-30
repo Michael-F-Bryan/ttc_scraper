@@ -5,17 +5,17 @@ import sys
 
 setup(
     name='ttc_scraper',
-    version=0.1.0,
+    version='0.1.0',
     packages=find_packages(exclude=['tests', 'docs', 'scripts']),
     license='MIT',
     long_description=open('README.rst').read(),
     author='Michael F Bryan',
+    entry_points = {
+        'console_scripts': ['scrape_ttc=ttc_scraper.__main__:main'],
+    },
     description='A scraper for the TTC website',
     install_requires=[
-        'pytest',
         'bs4',
-        'pytest-cov',
         'requests',
-        'jupyter',
         ],
 )
