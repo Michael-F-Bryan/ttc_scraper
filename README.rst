@@ -5,7 +5,16 @@ Tire Testing Consortium Website Scraper
 Description
 ===========
 A fairly simple program that will log into the TTC "secure" forum and then
-download all testing data.
+download all testing data. 
+
+After reading carefully through the Tire Testing Consortium's terms and 
+conditions it appears that scraping their website for testing data is 
+allowed, *unless* you aren't a part of a University registered with them. 
+Then you're officially a pirate. 
+
+However they don't put any actual limits on whether a computer is allowed to 
+use their site or do any rate limiting. So automating the download of
+everything on their forum should be legal.
 
 Installation
 ============
@@ -13,10 +22,10 @@ In order to use this program, you will need to have Python 3 installed.
 Preferably the latest version.
 
 First, obtain the source code by either downloading a copy from `github 
-<git@github.com:Michael-F-Bryan/ttc_scraper.git>`_ or cloning the source 
+<https://github.com/Michael-F-Bryan/ttc_scraper.git>`_ or cloning the source 
 directly with `git`::
     
-    git clone git@github.com:Michael-F-Bryan/ttc_scraper.git
+    git clone https://github.com/Michael-F-Bryan/ttc_scraper.git
 
 If you want to install the program you can do so with the following command
 (may require superuser privileges). ::
