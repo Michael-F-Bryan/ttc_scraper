@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, ProgrammingError, InvalidRequestError
 from bs4 import BeautifulSoup
 from html2text import html2text
+from datetime import datetime
 
 from grab.spider import Spider, Task
 from grab import Grab
@@ -167,13 +168,16 @@ class ForumSpider(Spider):
         created = author_tag.text.split('»')[-1].strip()
         content = elem.find(class_='content')
 
+        # Convert the timestamp to a python datetime
+        created_on = datetime.strptime(created, '%a %b %d, %Y %I:%M %p')
+
         # Convert any relative links in the content to absolute
         for anchor in content.find_all('a'):
             anchor['href'] = urljoin(task.url, anchor['href'])
 
         new_post = Post(
                 author=author,
-                created=created,
+                created=created_on,
                 html=innerHTML(content),
                 text=html2text(innerHTML(content)),
                 thread_id=current_thread.id)

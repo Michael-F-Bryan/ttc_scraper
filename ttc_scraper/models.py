@@ -1,7 +1,7 @@
 from sqlalchemy import Table, Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import String, Column, Integer, ForeignKey, Text
+from sqlalchemy import String, Column, Integer, ForeignKey, Text, DateTime
 
 
 
@@ -47,7 +47,7 @@ class Post(Base):
 
     id = Column(Integer, primary_key=True)
     author = Column(String(20), unique=False)
-    created = Column(String(20))
+    created = Column(DateTime)
     html = Column(Text)
     text = Column(Text)
 

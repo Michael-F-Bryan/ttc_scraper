@@ -9,7 +9,7 @@ def main():
     spidey.database_location = os.path.abspath('./records.sqlite')
     spidey.username = 'kyleaurisch'
     spidey.password =  'lancer12'
-    spider.log_file = 'stderr'
+    spidey.log_file = 'stderr'
 
     spidey.debug = False
 
