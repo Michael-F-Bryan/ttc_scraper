@@ -143,37 +143,32 @@ class ForumSpider(Spider):
             author_tag = elem.find(class_='author')
             author = author_tag.strong.text
             created = author_tag.text.split('»')[-1].strip()
-            content = innerHTML(elem.find(class_='content'))
+            content = elem.find(class_='content')
 
             new_post = Post(
                    author=author,
                    created=created,
-                   content=content,
+                   content=innerHTML(content),
                    thread_id=current_thread.id)
 
             self.session.add(new_post)
             self.session.commit()
             self.logger.debug('Post created: {}'.format(new_post))
 
-            # look for inline attachments
-            inline_attachments = soup.find_all('dl', class_='file')
-            for thing in inline_attachments:
-                # Do the appropriate thing for all possible types of
-                # inline attachment
-                if thing.dt['class'] == 'attach-image':
-                    img = thing.dt.img
-                    link = urljoin(task.url, img['href'])
+            # look for embedded images
+            embedded_images = content.find_all('img')
 
-                    new_attachment = Attachment(
-                            name=img['alt'], 
-                            link=link)
-                    new_attachment.post_id = new_post.id
-                    self.session.add(new_attachment)
-                    self.session.commit()
-                else:
-                    logger.error('Found new type of line attachment: {}'.format(
-                        thing.dt['class']))
-                    logger.error('\n\n{}\n\n'.format(thing.prettify()))
+            for img in embedded_images:
+                link = urljoin(task.url, img['src'])
+
+                new_attachment = Attachment(
+                        name=img.get('alt', '').strip() or link.split('/')[-1], 
+                        link=link)
+                new_attachment.post_id = new_post.id
+                self.session.add(new_attachment)
+                self.session.commit()
+
+                self.logger.info('Found inline attachment: {}'.format(new_attachment))
 
             # Check if there were any attachments
             attach_box = elem.find(class_='attachbox')

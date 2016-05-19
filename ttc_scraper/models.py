@@ -61,7 +61,7 @@ class Post(Base):
 
 
 class Url(Base):
-    __tablename__ = 'urls'
+    __tablename__ = '_urls'
     id = Column(Integer, primary_key=True)
     link = Column(String(128), index=True, unique=True)
 
