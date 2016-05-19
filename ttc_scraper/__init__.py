@@ -1,5 +1,6 @@
-from .scraper import Browser
-from .utils import BrowserError, LoginError
+import pkg_resources
 
-__all__ = ['Browser', 'BrowserError', 'LoginError']
-__version__ = '0.1.1'
+try:
+    __version__ = pkg_resources.get_distribution(__name__).version
+except:
+    __version__ = 'unknown'
