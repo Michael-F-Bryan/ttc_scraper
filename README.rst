@@ -45,33 +45,36 @@ If you want to install the program you can do so with the following command
 
 Usage
 =====
-There are two ways you can run this program. Installing it as a package gives
-you access to the `scrape_ttc` command, however that is more of a convenience
-thing and there aren't any other big differences.
-
 To run the program, change to the project's root directory and type::
 
     python3 -m ttc_scraper YOUR_USERNAME YOUR_PASSWORD
-
-Or if you installed the program::
-
-    scrape_ttc YOUR_USERNAME YOUR_PASSWORD
-
-Having the program installed also allows you to run the program from anywhere
-with the `python -m ...` command. Note that the `scrape_ttc` command is just a
-shortcut for the `python -m ...` command used above, perfect for the lazy among
-us.
 
 Halp!
 -----
 If you are having issues or want to customise how the program runs, then a good
 idea is to check out the program's help with::
 
-    scrape_ttc --help
+    $ python3 -m ttc_scraper --help
+
+    # Prints out
+    usage: __main__.py [-h] [-V] [-v] [-d DATABASE] username password
+
+    positional arguments:
+    username              Your username
+    password              Your password
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -V, --version         Print the version number
+    -v, --verbose         Print verbose output to the terminal
+    -d DATABASE, --database DATABASE
+                            Where to store the data scraped from the TTC forum
+
 
 If you think you find a bug in the program or you've followed the above
 installation instructions correctly yet it keeps crashing then create an issue
-at the github link above.
+at the GitHub link above.
+
 
 Licensing
 =========
