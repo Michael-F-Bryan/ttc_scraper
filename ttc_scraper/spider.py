@@ -2,14 +2,15 @@ import logging
 from urllib.parse import urljoin
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError, ProgrammingError, InvalidRequestError
+from bs4 import BeautifulSoup
 
 from grab.spider import Spider, Task
 from grab import Grab
 from weblib.error import DataNotFound
 from utils.misc import get_logger, humansize
 
-from .models import Base, Forum, Thread, Url
-
+from .models import Base, Forum, Thread, Url, Post, Attachment
 
 
 
@@ -31,9 +32,10 @@ class ForumSpider(Spider):
         return g
 
     def prepare(self):
-        self.logger = get_logger(__name__, 'stderr')
-        self.logger.setLevel(logging.DEBUG)
         self.base_url = 'http://sae.wsu.edu/ttc/'
+
+        log_level = logging.DEBUG if getattr(self, 'debug', False) else logging.INFO
+        self.logger = get_logger(__name__, 'stderr', log_level=log_level)
 
         self.engine = create_engine('sqlite:///{}'.format(self.database_location))
 
@@ -65,16 +67,29 @@ class ForumSpider(Spider):
             yield Task('forum', url=self.base_url, title='Main Forum')
 
     def task_forum(self, grab, task):
-        self.logger.info('Checking forum page: {}'.format(task.title))
+        if not hasattr(task, 'forum_id'):
+            # Add the forum to our database
+            parent_id = getattr(task, 'parent_id', None)
+            new_forum = Forum(name=task.title, link=task.url, parent_id=parent_id)
+            self.session.add(new_forum)
+            self.session.commit()
+            self.logger.debug('Forum created: {}'.format(new_forum))
+        else:
+            new_forum = self.session.query(Forum).filter(Forum.id ==
+                    task.forum_id).first()
+
+        self.logger.info('Reading forum: {} (page {})'.format(task.title,
+                getattr(task, 'page', 1)))
 
         # Check all the forums we find
         for elem in grab.doc.select('//a[@class="forumtitle"]'):
-            new_forum_name = task.name + '/' + elem.text()
             link = urljoin(self.base_url, elem.attr('href'))
             self.logger.debug('Found forum: {}'.format(link))
 
             if not self.already_checked(link):
-                yield Task('forum', url=link, title=new_forum_name)
+                yield Task('forum', url=link, 
+                        title=elem.text(), 
+                        parent_id=new_forum.id)
 
         # Check all the threads we find
         for elem in grab.doc.select('//a[@class="topictitle"]'):
@@ -82,18 +97,107 @@ class ForumSpider(Spider):
             self.logger.debug('Found thread: {}'.format(link))
 
             if not self.already_checked(link):
-                yield Task('thread', url=link, title=elem.text(), forum=task.title)
+                yield Task('thread', 
+                        url=link, 
+                        title=elem.text(), 
+                        forum=task.title,
+                        forum_id=new_forum.id)
+
+        # Now queue the other pages of this Forum
+        pager = grab.doc.select('//div[@class="pagination"]')
+        paginations = self.pagination_links(pager)
+
+        for link, page in paginations:
+            link = urljoin(task.url, link)
+
+            if not self.already_checked(link):
+                yield Task('forum', 
+                        url=link, 
+                        title=elem.text(), 
+                        parent_id=parent_id,
+                        forum_id=new_forum.id,
+                        page=page)
+
 
     def task_thread(self, grab, task):
-        self.logger.info('Checking thread "{}" from "{}"'.format(task.title, 
-            task.forum))
+        if not hasattr(task, 'thread_id'):
+            current_thread = Thread(
+                    name=task.title,
+                    link=task.url,
+                    forum_id=task.forum_id)
+            self.session.add(current_thread)
+            self.session.commit()
+            self.logger.debug('Thread created: {}'.format(current_thread))
+        else:
+            current_thread = self.session.query(Thread).filter(Thread.id ==
+                    task.thread_id).first()
+
+        self.logger.info('Checking thread: {} (page {})'.format(current_thread.name,
+            getattr(task, 'page', 1)))
+
+        soup = BeautifulSoup(grab.response.body, 'html.parser')
+
+        # Iterate through the posts, saving them
+        for elem in soup.find_all(class_='postbody'):
+            author_tag = elem.find(class_='author')
+            author = author_tag.strong.text
+            created = author_tag.text.split('»')[-1].strip()
+            content = elem.find(class_='content').text
+
+            new_post = Post(
+                   author=author,
+                   created=created,
+                   content=content,
+                   thread_id=current_thread.id)
+
+            self.session.add(new_post)
+            self.session.commit()
+            self.logger.debug('Post created: {}'.format(new_post))
+
+            # Check if there were any attachments
+            attach_box = elem.find(class_='attachbox')
+            if attach_box is not None:
+                for thing in attach_box.find_all(class_='postlink'):
+                    link = urljoin(task.url, thing['href'])
+                    name = thing.text
+
+                    new_attachment = Attachment(name=name, link=link)
+                    new_attachment.post_id = new_post.id
+
+                    self.session.add(new_attachment)
+                    self.session.commit()
+
+                    self.logger.info('Attachment found: {}'.format(new_attachment))
+        # Now queue the other pages of this thread
+        pager = grab.doc.select('//div[@class="pagination"]')
+        paginations = self.pagination_links(pager)
+
+        for link, page in paginations:
+            link = urljoin(task.url, link)
+
+            if not self.already_checked(link):
+                yield Task('thread', 
+                        url=link, 
+                        title=task.title, 
+                        forum=task.forum,
+                        forum_id=task.forum_id,
+                        thread_id=current_thread.id,
+                        page=page)
 
     def already_checked(self, url):
         if url in self.visited_urls:
             return True
         else:
-            new_url = Url(link=url)
-            self.session.add(new_url)
-            self.session.commit()
-            self.visited_urls.add(url)
-            return False
+            try:
+                new_url = Url(link=url)
+                self.session.add(new_url)
+                self.session.commit()
+                self.visited_urls.add(url)
+                return False
+            except (IntegrityError, InvalidRequestError):
+                self.session.rollback()
+                return True
+
+    def pagination_links(self, pagination_element):
+        for elem in pagination_element.select('span/a'):
+            yield (elem.attr('href'), elem.text())
