@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from grab.spider import Spider, Task
 from grab import Grab
 from weblib.error import DataNotFound
-from utils.misc import get_logger, humansize
+from utils.misc import get_logger, humansize, innerHTML
 
 from .models import Base, Forum, Thread, Url, Post, Attachment
 
@@ -143,7 +143,7 @@ class ForumSpider(Spider):
             author_tag = elem.find(class_='author')
             author = author_tag.strong.text
             created = author_tag.text.split('»')[-1].strip()
-            content = elem.find(class_='content').text
+            content = innerHTML(elem.find(class_='content'))
 
             new_post = Post(
                    author=author,
@@ -155,6 +155,26 @@ class ForumSpider(Spider):
             self.session.commit()
             self.logger.debug('Post created: {}'.format(new_post))
 
+            # look for inline attachments
+            inline_attachments = soup.find_all('dl', class_='file'):
+                for thing in inline_attachments:
+                    # Do the appropriate thing for all possible types of
+                    # inline attachment
+                    if thing.dt['class'] == 'attach-image':
+                        img = thing.dt.img
+                        link = urljoin(task.url, img['href'])
+
+                        new_attachment = Attachment(
+                                name=img['alt'], 
+                                link=link)
+                        new_attachment.post_id = new_post.id
+                        self.session.add(new_attachment)
+                        self.session.commit()
+                    else:
+                        logger.error('Found new type of line attachment: {}'.format(
+                            thing.dt['class']))
+                        logger.error('\n\n{}\n\n'.format(thing.prettify()))
+
             # Check if there were any attachments
             attach_box = elem.find(class_='attachbox')
             if attach_box is not None:
@@ -164,11 +184,11 @@ class ForumSpider(Spider):
 
                     new_attachment = Attachment(name=name, link=link)
                     new_attachment.post_id = new_post.id
-
                     self.session.add(new_attachment)
                     self.session.commit()
 
                     self.logger.info('Attachment found: {}'.format(new_attachment))
+
         # Now queue the other pages of this thread
         pager = grab.doc.select('//div[@class="pagination"]')
         paginations = self.pagination_links(pager)
