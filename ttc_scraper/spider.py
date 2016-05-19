@@ -36,7 +36,9 @@ class ForumSpider(Spider):
         self.base_url = 'http://sae.wsu.edu/ttc/'
 
         log_level = logging.DEBUG if getattr(self, 'debug', False) else logging.INFO
-        self.logger = get_logger(__name__, 'stderr', log_level=log_level)
+        self.logger = get_logger(__name__,
+                self.log_file or 'stderr', 
+                log_level=log_level)
 
         self.engine = create_engine('sqlite:///{}'.format(self.database_location),
                 connect_args={'check_same_thread':False})
@@ -141,54 +143,7 @@ class ForumSpider(Spider):
 
         # Iterate through the posts, saving them
         for elem in soup.find_all(class_='postbody'):
-            author_tag = elem.find(class_='author')
-            author = author_tag.strong.text
-            created = author_tag.text.split('»')[-1].strip()
-            content = elem.find(class_='content')
-
-            # Convert any relative links in the content to absolute
-            for anchor in content.find_all('a'):
-                anchor['href'] = urljoin(self.base_url, anchor['href'])
-
-            new_post = Post(
-                   author=author,
-                   created=created,
-                   html=innerHTML(content),
-                   text=html2text(innerHTML(content)),
-                   thread_id=current_thread.id)
-
-            self.session.add(new_post)
-            self.session.commit()
-            self.logger.debug('Post created: {}'.format(new_post))
-
-            # look for embedded images
-            embedded_images = content.find_all('img')
-
-            for img in embedded_images:
-                link = urljoin(task.url, img['src'])
-
-                new_attachment = Attachment(
-                        name=img.get('alt', '').strip() or link.split('/')[-1], 
-                        link=link)
-                new_attachment.post_id = new_post.id
-                self.session.add(new_attachment)
-                self.session.commit()
-
-                self.logger.info('Found inline attachment: {}'.format(new_attachment))
-
-            # Check if there were any attachments
-            attach_box = elem.find(class_='attachbox')
-            if attach_box is not None:
-                for thing in attach_box.find_all(class_='postlink'):
-                    link = urljoin(task.url, thing['href'])
-                    name = thing.text
-
-                    new_attachment = Attachment(name=name, link=link)
-                    new_attachment.post_id = new_post.id
-                    self.session.add(new_attachment)
-                    self.session.commit()
-
-                    self.logger.info('Attachment found: {}'.format(new_attachment))
+            self.parse_post(grab, task, elem, current_thread)
 
         # Now queue the other pages of this thread
         pager = grab.doc.select('//div[@class="pagination"]')
@@ -205,6 +160,56 @@ class ForumSpider(Spider):
                         forum_id=task.forum_id,
                         thread_id=current_thread.id,
                         page=page)
+
+    def parse_post(self, grab, task, elem, current_thread):
+        author_tag = elem.find(class_='author')
+        author = author_tag.strong.text
+        created = author_tag.text.split('»')[-1].strip()
+        content = elem.find(class_='content')
+
+        # Convert any relative links in the content to absolute
+        for anchor in content.find_all('a'):
+            anchor['href'] = urljoin(task.url, anchor['href'])
+
+        new_post = Post(
+                author=author,
+                created=created,
+                html=innerHTML(content),
+                text=html2text(innerHTML(content)),
+                thread_id=current_thread.id)
+
+        self.session.add(new_post)
+        self.session.commit()
+        self.logger.debug('Post created: {}'.format(new_post))
+
+        # look for embedded images
+        embedded_images = content.find_all('img')
+
+        for img in embedded_images:
+            link = urljoin(task.url, img['src'])
+
+            new_attachment = Attachment(
+                    name=img.get('alt', '').strip() or link.split('/')[-1], 
+                    link=link)
+            new_attachment.post_id = new_post.id
+            self.session.add(new_attachment)
+            self.session.commit()
+
+            self.logger.info('Found inline attachment: {}'.format(new_attachment))
+
+        # Check if there were any attachments
+        attach_box = elem.find(class_='attachbox')
+        if attach_box is not None:
+            for thing in attach_box.find_all(class_='postlink'):
+                link = urljoin(task.url, thing['href'])
+                name = thing.text
+
+                new_attachment = Attachment(name=name, link=link)
+                new_attachment.post_id = new_post.id
+                self.session.add(new_attachment)
+                self.session.commit()
+
+                self.logger.info('Attachment found: {}'.format(new_attachment))
 
     def already_checked(self, url):
         if url in self.visited_urls:
