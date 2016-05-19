@@ -37,7 +37,8 @@ class ForumSpider(Spider):
         log_level = logging.DEBUG if getattr(self, 'debug', False) else logging.INFO
         self.logger = get_logger(__name__, 'stderr', log_level=log_level)
 
-        self.engine = create_engine('sqlite:///{}'.format(self.database_location))
+        self.engine = create_engine('sqlite:///{}'.format(self.database_location),
+                connect_args={'check_same_thread':False})
 
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)  
