@@ -48,7 +48,8 @@ class Post(Base):
     id = Column(Integer, primary_key=True)
     author = Column(String(20), unique=False)
     created = Column(String(20))
-    content = Column(Text)
+    html = Column(Text)
+    text = Column(Text)
 
     thread_id = Column(Integer, ForeignKey('threads.id'))
     threads = relationship('Thread', backref='posts')

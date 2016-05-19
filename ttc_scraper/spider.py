@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, ProgrammingError, InvalidRequestError
 from bs4 import BeautifulSoup
+from html2text import html2text
 
 from grab.spider import Spider, Task
 from grab import Grab
@@ -148,7 +149,8 @@ class ForumSpider(Spider):
             new_post = Post(
                    author=author,
                    created=created,
-                   content=innerHTML(content),
+                   html=innerHTML(content),
+                   text=html2text(innerHTML(content)),
                    thread_id=current_thread.id)
 
             self.session.add(new_post)
