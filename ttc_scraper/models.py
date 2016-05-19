@@ -24,3 +24,10 @@ class Thread(Base):
 
     forum_id = Column(Integer, ForeignKey('forums.id'))
     forums = relationship('Forum', backref='threads')
+
+class Url(Base):
+    __tablename__ = 'urls'
+    id = Column(Integer, primary_key=True)
+    link = Column(String(128), index=True, unique=True)
+
+
