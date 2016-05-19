@@ -146,6 +146,10 @@ class ForumSpider(Spider):
             created = author_tag.text.split('»')[-1].strip()
             content = elem.find(class_='content')
 
+            # Convert any relative links in the content to absolute
+            for anchor in content.find_all('a'):
+                anchor['href'] = urljoin(self.base_url, anchor['href'])
+
             new_post = Post(
                    author=author,
                    created=created,
